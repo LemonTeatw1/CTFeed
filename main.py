@@ -207,17 +207,30 @@ async def on_ready():
 async def check_new_events():
     events = await fetch_ctf_events()
     
+    channel_name = os.getenv('ANNOUNCEMENT_CHANNEL_ID')
+    if not channel_name:
+        logger.error("❌ 請在 .env 檔案中設定 ANNOUNCEMENT_CHANNEL_ID 環境變數")
+        logger.error("例如：ANNOUNCEMENT_CHANNEL_ID=ctftime")
+        logger.error("請檢查 .env 檔案是否正確設定")
+        await bot.close()
+        return
+    
     channel = None
     for guild in bot.guilds:
         for text_channel in guild.text_channels:
-            if text_channel.name.lower() == 'ctftime':
+            if text_channel.name.lower() == channel_name.lower():
                 channel = text_channel
                 break
         if channel:
             break
     
     if not channel:
-        logger.warning("沒有找到 #ctftime 頻道")
+        logger.error(f"❌ 找不到名為 '{channel_name}' 的頻道")
+        logger.error(f"請確認：")
+        logger.error(f"1. 頻道名稱正確：{channel_name}")
+        logger.error(f"2. Bot 有權限查看該頻道")
+        logger.error(f"3. 該頻道存在於 Bot 所在的伺服器中")
+        await bot.close()
         return
     
     new_events_found = False
