@@ -53,8 +53,7 @@ async def create_event_embed(event):
     )
     
     details = []
-    details.append(f"**權重：** {event.get('weight', 0)}")
-    details.append(f"**格式：** {event.get('format', '未知')}")
+    details.append(f"**評分：** {event.get('weight', 0)}")
     if event.get('restrictions'):
         details.append(f"**限制：** {event['restrictions']}")
     
