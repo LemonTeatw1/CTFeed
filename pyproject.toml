@@ -1,0 +1,16 @@
+[project]
+name = "ctfeed"
+version = "0.1.0"
+description = "Discord bot for tracking CTF events from CTFtime"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "py-cord>=2.4.1",
+    "aiohttp>=3.9.0",
+    "python-dotenv>=1.0.0",
+    "asyncio-throttle>=1.0.2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
