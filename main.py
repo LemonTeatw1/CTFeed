@@ -7,6 +7,7 @@ from discord.ext import commands, tasks
 from datetime import datetime, timedelta
 import logging
 import os
+import json
 from dotenv import load_dotenv
 import pytz
 
@@ -14,7 +15,38 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 bot = commands.Bot(command_prefix='!ctf ', intents=discord.Intents.default())
-bot.known_events = set()
+
+def load_known_events():
+    try:
+        known_events_file = os.getenv('KNOWN_EVENTS_FILE', 'data/known_events.json')
+        if os.path.exists(known_events_file):
+            with open(known_events_file, 'r') as f:
+                events = json.load(f)
+                logger.info(f"載入了 {len(events)} 個已知事件")
+                return set(events)
+    except Exception as e:
+        logger.error(f"載入已知事件失敗: {e}")
+    return set()
+
+def save_known_events(events):
+    try:
+        known_events_file = os.getenv('KNOWN_EVENTS_FILE', 'data/known_events.json')
+        os.makedirs(os.path.dirname(known_events_file), exist_ok=True)
+        with open(known_events_file, 'w') as f:
+            json.dump(list(events), f)
+        logger.info(f"保存了 {len(events)} 個已知事件")
+    except Exception as e:
+        logger.error(f"保存已知事件失敗: {e}")
+
+def cleanup_old_events(events, days_old=30):
+    try:
+        cutoff_time = datetime.now() - timedelta(days=days_old)
+        return events
+    except Exception as e:
+        logger.error(f"清理舊事件失敗: {e}")
+        return events
+
+bot.known_events = load_known_events()
 
 async def fetch_ctf_events():
     url = "https://ctftime.org/api/v1/events/"
@@ -96,6 +128,7 @@ def create_event_embed(event, event_type="new"):
 @bot.event
 async def on_ready():
     logger.info(f'Bot 已登入: {bot.user}')
+    logger.info(f"目前追蹤 {len(bot.known_events)} 個已知事件")
     check_new_events.start()
 
 @bot.command(name='upcoming')
@@ -230,13 +263,15 @@ async def check_new_events():
             break
     
     if not channel:
-        await ctx.send("❌ 沒有找到 #ctftime 頻道")
+        logger.warning("沒有找到 #ctftime 頻道")
         return
     
+    new_events_found = False
     for event in events:
         event_id = event['id']
         if event_id not in bot.known_events:
             bot.known_events.add(event_id)
+            new_events_found = True
 
             embed = create_event_embed(event, "new")
             try:
@@ -244,6 +279,9 @@ async def check_new_events():
                 logger.info(f"發送新事件通知: {event['title']}")
             except Exception as e:
                 logger.error(f"發送通知失敗: {e}")
+    
+    if new_events_found:
+        save_known_events(bot.known_events)
 
 @check_new_events.before_loop
 async def before_check():
