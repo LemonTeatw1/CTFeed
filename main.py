@@ -48,6 +48,64 @@ def cleanup_old_events(events, days_old=30):
 
 bot.known_events = load_known_events()
 
+async def fetch_team_info(team_id):
+    """獲取團隊資訊，包括國家"""
+    url = f"https://ctftime.org/api/v1/teams/{team_id}/"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    team_data = await response.json()
+                    return team_data.get('country'), team_data.get('name')
+    except Exception as e:
+        logger.error(f"獲取團隊資訊錯誤: {e}")
+    return None, None
+
+def get_country_info(country_code):
+    if not country_code:
+        return "🌍", "未知"
+    
+    country_flags = {
+        'CN': '🇨🇳', 'JP': '🇯🇵', 'KR': '🇰🇷', 'TW': '🇹🇼', 'HK': '🇭🇰', 'MO': '🇲🇴',
+        'IN': '🇮🇳', 'SG': '🇸🇬', 'MY': '🇲🇾', 'TH': '🇹🇭', 'VN': '🇻🇳', 'ID': '🇮🇩',
+        'PH': '🇵🇭', 'BD': '🇧🇩', 'PK': '🇵🇰', 'LK': '🇱🇰', 'NP': '🇳🇵', 'MM': '🇲🇲',
+        'KH': '🇰🇭', 'LA': '🇱🇦', 'BN': '🇧🇳', 'MN': '🇲🇳', 'UZ': '🇺🇿', 'KZ': '🇰🇿',
+        
+        'GB': '🇬🇧', 'DE': '🇩🇪', 'FR': '🇫🇷', 'IT': '🇮🇹', 'ES': '🇪🇸', 'NL': '🇳🇱',
+        'CH': '🇨🇭', 'SE': '🇸🇪', 'NO': '🇳🇴', 'DK': '🇩🇰', 'FI': '🇫🇮', 'BE': '🇧🇪',
+        'AT': '🇦🇹', 'PL': '🇵🇱', 'CZ': '🇨🇿', 'SK': '🇸🇰', 'HU': '🇭🇺', 'RO': '🇷🇴',
+        'BG': '🇧🇬', 'HR': '🇭🇷', 'RS': '🇷🇸', 'SI': '🇸🇮', 'BA': '🇧🇦', 'ME': '🇲🇪',
+        'MK': '🇲🇰', 'AL': '🇦🇱', 'GR': '🇬🇷', 'CY': '🇨🇾', 'MT': '🇲🇹', 'PT': '🇵🇹',
+        'IE': '🇮🇪', 'IS': '🇮🇸', 'LU': '🇱🇺', 'LI': '🇱🇮', 'AD': '🇦🇩', 'SM': '🇸🇲',
+        'VA': '🇻🇦', 'MC': '🇲🇨', 'RU': '🇷🇺', 'UA': '🇺🇦', 'BY': '🇧🇾', 'LT': '🇱🇹',
+        'LV': '🇱🇻', 'EE': '🇪🇪', 'MD': '🇲🇩', 'GE': '🇬🇪', 'AM': '🇦🇲', 'AZ': '🇦🇿',
+
+        'US': '🇺🇸', 'CA': '🇨🇦', 'MX': '🇲🇽', 'GT': '🇬🇹', 'BZ': '🇧🇿', 'SV': '🇸🇻',
+        'HN': '🇭🇳', 'NI': '🇳🇮', 'CR': '🇨🇷', 'PA': '🇵🇦', 'CU': '🇨🇺', 'JM': '🇯🇲',
+        'HT': '🇭🇹', 'DO': '🇩🇴', 'PR': '🇵🇷', 'TT': '🇹🇹', 'BB': '🇧🇧', 'GD': '🇬🇩',
+        
+        'BR': '🇧🇷', 'AR': '🇦🇷', 'CL': '🇨🇱', 'CO': '🇨🇴', 'PE': '🇵🇪', 'VE': '🇻🇪',
+        'EC': '🇪🇨', 'BO': '🇧🇴', 'PY': '🇵🇾', 'UY': '🇺🇾', 'SR': '🇸🇷', 'GY': '🇬🇾',
+        
+        'ZA': '🇿🇦', 'EG': '🇪🇬', 'NG': '🇳🇬', 'KE': '🇰🇪', 'MA': '🇲🇦', 'ET': '🇪🇹',
+        'GH': '🇬🇭', 'TN': '🇹🇳', 'DZ': '🇩🇿', 'LY': '🇱🇾', 'SD': '🇸🇩', 'UG': '🇺🇬',
+        'TZ': '🇹🇿', 'ZW': '🇿🇼', 'ZM': '🇿🇲', 'MW': '🇲🇼', 'MZ': '🇲🇿', 'BW': '🇧🇼',
+        'NA': '🇳🇦', 'SZ': '🇸🇿', 'LS': '🇱🇸', 'MG': '🇲🇬', 'MU': '🇲🇺', 'SC': '🇸🇨',
+        
+        'IL': '🇮🇱', 'TR': '🇹🇷', 'IR': '🇮🇷', 'SA': '🇸🇦', 'AE': '🇦🇪', 'IQ': '🇮🇶',
+        'SY': '🇸🇾', 'LB': '🇱🇧', 'JO': '🇯🇴', 'PS': '🇵🇸', 'YE': '🇾🇪', 'OM': '🇴🇲',
+        'QA': '🇶🇦', 'BH': '🇧🇭', 'KW': '🇰🇼', 'AF': '🇦🇫',
+        
+        'AU': '🇦🇺', 'NZ': '🇳🇿', 'FJ': '🇫🇯', 'PG': '🇵🇬', 'TO': '🇹🇴', 'WS': '🇼🇸',
+        'VU': '🇻🇺', 'SB': '🇸🇧', 'PW': '🇵🇼', 'FM': '🇫🇲', 'MH': '🇲🇭', 'KI': '🇰🇮',
+        'TV': '🇹🇻', 'NR': '🇳🇷'
+    }
+    
+    code = country_code.upper()
+    flag_emoji = country_flags.get(code, f"🏳️")
+    
+    return flag_emoji, code
+
 async def fetch_ctf_events():
     url = "https://ctftime.org/api/v1/events/"
     params = {
@@ -65,7 +123,7 @@ async def fetch_ctf_events():
         logger.error(f"API 錯誤: {e}")
     return []
 
-def create_event_embed(event, event_type="new"):
+async def create_event_embed(event, event_type="new"):
 
     start_time_utc = datetime.fromisoformat(event['start'].replace('Z', '+00:00'))
     finish_time_utc = datetime.fromisoformat(event['finish'].replace('Z', '+00:00'))
@@ -81,9 +139,29 @@ def create_event_embed(event, event_type="new"):
         title = "📅 即將開始的 CTF"
         color = discord.Color.blue()
     
+    organizer_info = []
+    first_country_flag = ""
+    if event.get('organizers'):
+        logger.info(f"處理 {len(event['organizers'])} 個主辦方")
+        for i, org in enumerate(event['organizers'][:3]):
+            try:
+                country_code, team_name = await fetch_team_info(org['id'])
+                logger.info(f"主辦方 {org['name']} (ID: {org['id']}) 國家: {country_code}")
+                country_flag, country_name = get_country_info(country_code)
+                if i == 0:
+                    first_country_flag = country_flag
+                organizer_info.append(f"{country_flag} {org['name']}")
+            except Exception as e:
+                logger.error(f"獲取主辦方 {org['name']} 資訊失敗: {e}")
+                organizer_info.append(f"🌍 {org['name']}")
+    
+    title_with_flag = event['title']
+    if first_country_flag:
+        title_with_flag = f"{first_country_flag} {event['title']}"
+    
     embed = discord.Embed(
         title=title,
-        description=f"**{event['title']}**",
+        description=f"**{title_with_flag}**",
         color=color
     )
     
@@ -100,6 +178,12 @@ def create_event_embed(event, event_type="new"):
     details.append(f"**格式：** {event.get('format', '未知')}")
     if event.get('restrictions'):
         details.append(f"**限制：** {event['restrictions']}")
+    
+    if organizer_info:
+        if len(organizer_info) == 1:
+            details.append(f"**主辦：** {organizer_info[0]}")
+        else:
+            details.append(f"**主辦：** {', '.join(organizer_info)}")
     
     embed.add_field(
         name="📋 比賽詳情",
@@ -273,7 +357,7 @@ async def check_new_events():
             bot.known_events.add(event_id)
             new_events_found = True
 
-            embed = create_event_embed(event, "new")
+            embed = await create_event_embed(event, "new")
             try:
                 await channel.send(embed=embed)
                 logger.info(f"發送新事件通知: {event['title']}")
