@@ -3,7 +3,7 @@
 import asyncio
 import aiohttp
 import discord
-from discord.ext import commands, tasks
+from discord.ext import tasks
 from datetime import datetime, timedelta
 import logging
 import os
@@ -12,9 +12,10 @@ from dotenv import load_dotenv
 import pytz
 
 logging.basicConfig(level=logging.INFO)
+logging.getLogger('discord.client').setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 
-bot = commands.Bot(command_prefix='!ctf ', intents=discord.Intents.default())
+bot = discord.Client(intents=discord.Intents.default())
 
 def load_known_events():
     try:
@@ -37,14 +38,6 @@ def save_known_events(events):
         logger.info(f"保存了 {len(events)} 個已知事件")
     except Exception as e:
         logger.error(f"保存已知事件失敗: {e}")
-
-def cleanup_old_events(events, days_old=30):
-    try:
-        cutoff_time = datetime.now() - timedelta(days=days_old)
-        return events
-    except Exception as e:
-        logger.error(f"清理舊事件失敗: {e}")
-        return events
 
 bot.known_events = load_known_events()
 
@@ -123,8 +116,7 @@ async def fetch_ctf_events():
         logger.error(f"API 錯誤: {e}")
     return []
 
-async def create_event_embed(event, event_type="new"):
-
+async def create_event_embed(event):
     start_time_utc = datetime.fromisoformat(event['start'].replace('Z', '+00:00'))
     finish_time_utc = datetime.fromisoformat(event['finish'].replace('Z', '+00:00'))
     
@@ -132,12 +124,8 @@ async def create_event_embed(event, event_type="new"):
     start_time_taipei = start_time_utc.astimezone(taipei_tz)
     finish_time_taipei = finish_time_utc.astimezone(taipei_tz)
     
-    if event_type == "new":
-        title = "🆕 新 CTF 競賽發布！"
-        color = discord.Color.green()
-    else:
-        title = "📅 即將開始的 CTF"
-        color = discord.Color.blue()
+    title = "🆕 新 CTF 競賽發布！"
+    color = discord.Color.green()
     
     organizer_info = []
     first_country_flag = ""
@@ -215,124 +203,6 @@ async def on_ready():
     logger.info(f"目前追蹤 {len(bot.known_events)} 個已知事件")
     check_new_events.start()
 
-@bot.command(name='upcoming')
-async def upcoming_events(ctx, limit: int = 5):
-
-    events = await fetch_ctf_events()
-    
-    if not events:
-        await ctx.send("❌ 無法獲取競賽資料")
-        return
-    
-    if limit > 10:
-        limit = 10
-    
-    embed = discord.Embed(
-        title="📅 即將開始的 CTF 競賽",
-        description=f"接下來 {min(len(events), limit)} 場競賽：",
-        color=discord.Color.blue()
-    )
-    
-    for i, event in enumerate(events[:limit]):
-        start_time_utc = datetime.fromisoformat(event['start'].replace('Z', '+00:00'))
-        taipei_tz = pytz.timezone('Asia/Taipei')
-        start_time_taipei = start_time_utc.astimezone(taipei_tz)
-        
-        time_until = start_time_utc - datetime.now(pytz.UTC)
-        days_until = time_until.days
-        hours_until = time_until.seconds // 3600
-        
-        time_str = f"{days_until}天 {hours_until}小時後" if days_until > 0 else f"{hours_until}小時後"
-        
-        ctftime_url = f"https://ctftime.org/event/{event['id']}"
-        
-        embed.add_field(
-            name=f"🏁 {event['title']}",
-            value=f"📅 {start_time_taipei.strftime('%m月%d日 %H:%M')} (台北) | {start_time_utc.strftime('%H:%M UTC')}\n"
-                  f"⏱️ 倒數：{time_str}\n"
-                  f"⚖️ 權重：{event.get('weight', 0)}\n"
-                  f"📊 {ctftime_url}",
-            inline=True
-        )
-    
-    await ctx.send(embed=embed)
-
-@bot.command(name='current')
-async def current_events(ctx):
-    url = "https://ctftime.org/api/v1/events/"
-    now = datetime.now()
-    params = {
-        'limit': 20,
-        'start': int((now - timedelta(days=7)).timestamp()),
-        'finish': int((now + timedelta(days=1)).timestamp())
-    }
-    
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, params=params) as response:
-                if response.status == 200:
-                    all_events = await response.json()
-                else:
-                    await ctx.send("❌ 無法獲取競賽資料")
-                    return
-    except Exception as e:
-        await ctx.send(f"❌ API 錯誤: {e}")
-        return
-    
-    current_events = []
-    now_utc = datetime.now(pytz.UTC)
-    for event in all_events:
-        start_time = datetime.fromisoformat(event['start'].replace('Z', '+00:00'))
-        finish_time = datetime.fromisoformat(event['finish'].replace('Z', '+00:00'))
-        if start_time <= now_utc <= finish_time:
-            current_events.append(event)
-    
-    if not current_events:
-        embed = discord.Embed(
-            title="🏃 進行中的 CTF 競賽",
-            description="目前沒有正在進行的競賽",
-            color=discord.Color.yellow()
-        )
-    else:
-        embed = discord.Embed(
-            title="🏃 進行中的 CTF 競賽",
-            description=f"目前有 {len(current_events)} 場競賽正在進行：",
-            color=discord.Color.green()
-        )
-        
-        for event in current_events:
-            finish_time_utc = datetime.fromisoformat(event['finish'].replace('Z', '+00:00'))
-            taipei_tz = pytz.timezone('Asia/Taipei')
-            finish_time_taipei = finish_time_utc.astimezone(taipei_tz)
-            
-            time_left = finish_time_utc - datetime.now(pytz.UTC)
-            days_left = time_left.days
-            hours_left = time_left.seconds // 3600
-            
-            time_str = f"{days_left}天 {hours_left}小時" if days_left > 0 else f"{hours_left}小時"
-            
-            ctftime_url = f"https://ctftime.org/event/{event['id']}"
-            
-            embed.add_field(
-                name=f"⚡ {event['title']}",
-                value=f"🏁 結束：{finish_time_taipei.strftime('%m月%d日 %H:%M')} (台北) | {finish_time_utc.strftime('%H:%M UTC')}\n"
-                      f"⏰ 剩餘：{time_str}\n"
-                      f"⚖️ 權重：{event.get('weight', 0)}\n"
-                      f"📊 {ctftime_url}",
-                inline=True
-            )
-    
-    await ctx.send(embed=embed)
-
-@bot.command(name='ping')
-async def ping(ctx):
-    embed = discord.Embed(
-        title="🏓 Pong!",
-        description="Bot 運作正常",
-        color=discord.Color.green()
-    )
-    await ctx.send(embed=embed)
-
 @tasks.loop(minutes=30)
 async def check_new_events():
     events = await fetch_ctf_events()
@@ -357,7 +227,7 @@ async def check_new_events():
             bot.known_events.add(event_id)
             new_events_found = True
 
-            embed = await create_event_embed(event, "new")
+            embed = await create_event_embed(event)
             try:
                 await channel.send(embed=embed)
                 logger.info(f"發送新事件通知: {event['title']}")
@@ -372,7 +242,6 @@ async def before_check():
     await bot.wait_until_ready()
 
 if __name__ == "__main__":
-
     load_dotenv()
     token = os.getenv('DISCORD_BOT_TOKEN')
 
