@@ -21,7 +21,7 @@ async def create_event_embed(event):
     organizer_info = []
     first_country_flag = ""
     if event.get('organizers'):
-        logger.info(f"處理 {len(event['organizers'])} 個主辦方")
+        logger.info(f"Processing {len(event['organizers'])} organizers")
         for i, org in enumerate(event['organizers'][:3]):
             try:
                 country_code, team_name = await fetch_team_info(org['id'])
