@@ -11,29 +11,35 @@ from src.ctf_api import fetch_ctf_events
 from src.embed_creator import create_event_embed
 
 logging.basicConfig(level=logging.INFO)
-logging.getLogger('discord.client').setLevel(logging.ERROR)
+logging.getLogger("discord.client").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 
 bot = discord.Client(intents=discord.Intents.default())
 
 known_events = load_known_events()
 
+
 @bot.event
 async def on_ready():
-    logger.info(f'Bot logged in: {bot.user}')
+    logger.info(f"Bot logged in: {bot.user}")
     if known_events:
-        logger.info(f"Loading data/known_events.json for {len(known_events)} known competitions")
+        logger.info(
+            f"Loading data/known_events.json for {len(known_events)} known competitions"
+        )
     else:
-        logger.info("No known competitions found, creating new file data/known_events.json")
+        logger.info(
+            "No known competitions found, creating new file data/known_events.json"
+        )
         save_known_events(set())
     check_new_events.start()
+
 
 @tasks.loop(minutes=CHECK_INTERVAL)
 async def check_new_events():
     global known_events
-    
+
     events = await fetch_ctf_events()
-    
+
     channel_name = ANNOUNCEMENT_CHANNEL_ID
     if not channel_name:
         logger.error("Please set ANNOUNCEMENT_CHANNEL_ID in .env file")
@@ -41,7 +47,7 @@ async def check_new_events():
         logger.error("Please check if the .env file is correctly set")
         await bot.close()
         return
-    
+
     channel = None
     for guild in bot.guilds:
         for text_channel in guild.text_channels:
@@ -50,7 +56,7 @@ async def check_new_events():
                 break
         if channel:
             break
-    
+
     if not channel:
         logger.error(f"Can't find channel named '{channel_name}'")
         logger.error(f"Please check:")
@@ -59,10 +65,10 @@ async def check_new_events():
         logger.error(f"3. The channel exists in the server where the Bot is located")
         await bot.close()
         return
-    
+
     new_events_found = False
     for event in events:
-        event_id = event['id']
+        event_id = event["id"]
         if event_id not in known_events:
             known_events.add(event_id)
             new_events_found = True
@@ -73,21 +79,24 @@ async def check_new_events():
                 logger.info(f"Sent new event notification: {event['title']}")
             except Exception as e:
                 logger.error(f"Failed to send notification: {e}")
-    
+
     if new_events_found:
         save_known_events(known_events)
+
 
 @check_new_events.before_loop
 async def before_check():
     await bot.wait_until_ready()
 
+
 def main():
     if not DISCORD_BOT_TOKEN:
         print("Please set DISCORD_BOT_TOKEN in .env file")
         exit(1)
-    
+
     print("Start CTF Bot...")
     bot.run(DISCORD_BOT_TOKEN)
+
 
 if __name__ == "__main__":
     main()
