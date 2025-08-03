@@ -20,8 +20,12 @@ known_events = load_known_events()
 
 @bot.event
 async def on_ready():
-    logger.info(f'Bot 已登入: {bot.user}')
-    logger.info(f"目前追蹤 {len(known_events)} 個已知事件")
+    logger.info(f'Bot logged in: {bot.user}')
+    if known_events:
+        logger.info(f"Loading data/known_events.json for {len(known_events)} known competitions")
+    else:
+        logger.info("No known competitions found, creating new file data/known_events.json")
+        save_known_events(set())
     check_new_events.start()
 
 @tasks.loop(minutes=CHECK_INTERVAL)
@@ -32,9 +36,9 @@ async def check_new_events():
     
     channel_name = ANNOUNCEMENT_CHANNEL_ID
     if not channel_name:
-        logger.error("❌ 請在 .env 檔案中設定 ANNOUNCEMENT_CHANNEL_ID 環境變數")
-        logger.error("例如：ANNOUNCEMENT_CHANNEL_ID=ctftime")
-        logger.error("請檢查 .env 檔案是否正確設定")
+        logger.error("Please set ANNOUNCEMENT_CHANNEL_ID in .env file")
+        logger.error("For example: ANNOUNCEMENT_CHANNEL_ID=ctftime")
+        logger.error("Please check if the .env file is correctly set")
         await bot.close()
         return
     
@@ -48,11 +52,11 @@ async def check_new_events():
             break
     
     if not channel:
-        logger.error(f"❌ 找不到名為 '{channel_name}' 的頻道")
-        logger.error(f"請確認：")
-        logger.error(f"1. 頻道名稱正確：{channel_name}")
-        logger.error(f"2. Bot 有權限查看該頻道")
-        logger.error(f"3. 該頻道存在於 Bot 所在的伺服器中")
+        logger.error(f"Can't find channel named '{channel_name}'")
+        logger.error(f"Please check:")
+        logger.error(f"1. Channel name is correct: {channel_name}")
+        logger.error(f"2. Bot has permission to view the channel")
+        logger.error(f"3. The channel exists in the server where the Bot is located")
         await bot.close()
         return
     
@@ -66,9 +70,9 @@ async def check_new_events():
             embed = await create_event_embed(event)
             try:
                 await channel.send(embed=embed)
-                logger.info(f"發送新事件通知: {event['title']}")
+                logger.info(f"Sent new event notification: {event['title']}")
             except Exception as e:
-                logger.error(f"發送通知失敗: {e}")
+                logger.error(f"Failed to send notification: {e}")
     
     if new_events_found:
         save_known_events(known_events)
@@ -79,10 +83,10 @@ async def before_check():
 
 def main():
     if not DISCORD_BOT_TOKEN:
-        print("❌ 請在 .env 檔案中設定 DISCORD_BOT_TOKEN")
+        print("Please set DISCORD_BOT_TOKEN in .env file")
         exit(1)
     
-    print("🚀 啟動 CTF Bot...")
+    print("Start CTF Bot...")
     bot.run(DISCORD_BOT_TOKEN)
 
 if __name__ == "__main__":

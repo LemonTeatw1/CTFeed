@@ -18,7 +18,7 @@ async def fetch_ctf_events():
                 if response.status == 200:
                     return await response.json()
     except Exception as e:
-        logger.error(f"API 錯誤: {e}")
+        logger.error(f"API error: {e}")
     return []
 
 async def fetch_team_info(team_id):
@@ -30,5 +30,5 @@ async def fetch_team_info(team_id):
                     team_data = await response.json()
                     return team_data.get('country'), team_data.get('name')
     except Exception as e:
-        logger.error(f"獲取團隊資訊錯誤: {e}")
+        logger.error(f"Error fetching team info: {e}")
     return None, None 
