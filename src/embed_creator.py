@@ -25,13 +25,13 @@ async def create_event_embed(event):
         for i, org in enumerate(event['organizers'][:3]):
             try:
                 country_code, team_name = await fetch_team_info(org['id'])
-                logger.info(f"主辦方 {org['name']} (ID: {org['id']}) 國家: {country_code}")
+                logger.info(f"Organizer {org['name']} (ID: {org['id']}) country: {country_code}")
                 country_flag, country_name = get_country_info(country_code)
                 if i == 0:
                     first_country_flag = country_flag
                 organizer_info.append(f"{country_flag} {org['name']}")
             except Exception as e:
-                logger.error(f"獲取主辦方 {org['name']} 資訊失敗: {e}")
+                logger.error(f"Failed to fetch organizer {org['name']} info: {e}")
                 organizer_info.append(f"🌍 {org['name']}")
     
     title_with_flag = event['title']
