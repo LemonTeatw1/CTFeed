@@ -38,10 +38,12 @@ check_data_directory() {
     if [ ! -w "data" ]; then
         echo -e "${YELLOW}✗ Data directory is not writable, creating...${NC}"
         mkdir -p data
+        chmod 666 data/known_events.json 2>/dev/null || true
     fi
     if [ ! -f "data/known_events.json" ]; then
         echo -e "${YELLOW}✗ known_events.json not found, creating...${NC}"
         echo "[]" > data/known_events.json
+        chmod 666 data/known_events.json 2>/dev/null || true
     fi
     echo -e "${GREEN}✓ Data directory is writable and ${WHITE}data/known_events.json${NC} ${GREEN}is created${NC}"
     echo ""
@@ -158,9 +160,6 @@ ANNOUNCEMENT_CHANNEL_ID=$ANNOUNCEMENT_CHANNEL_ID
 
 # CTFtime API Configuration
 CTFTIME_API_BASE_URL=https://ctftime.org/api/v1
-
-# Cache event file located
-KNOWN_EVENTS_FILE=data/known_events.json
 EOF
 
 echo -e "${GREEN}✓ Configuration complete! .env file created successfully.${NC}"
