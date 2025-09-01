@@ -16,7 +16,7 @@ async def create_event_embed(event):
     start_time_taipei = start_time_utc.astimezone(taipei_tz)
     finish_time_taipei = finish_time_utc.astimezone(taipei_tz)
 
-    title = "🆕 新 CTF 競賽發布！"
+    title = "有新的 CTF 競賽！"
     color = discord.Color.green()
 
     organizer_info = []
@@ -64,14 +64,14 @@ async def create_event_embed(event):
         else:
             details.append(f"**主辦：** {', '.join(organizer_info)}")
 
-    embed.add_field(name="📋 比賽詳情", value="\n".join(details), inline=True)
+    embed.add_field(name="比賽詳情", value="\n".join(details), inline=True)
 
     links = []
     if event.get("url"):
         links.append(f"🌐 **官方網站：** {event['url']}")
 
     ctftime_url = f"https://ctftime.org/event/{event['id']}"
-    links.append(f"📊 **CTFtime：** {ctftime_url}")
+    links.append(f"**CTFtime：** {ctftime_url}")
 
     if links:
         embed.add_field(name="🔗 相關連結", value="\n".join(links), inline=False)

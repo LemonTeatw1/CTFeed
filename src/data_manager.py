@@ -1,10 +1,10 @@
 import json
 import os
 import logging
-from src.config import KNOWN_EVENTS_FILE
 
 logger = logging.getLogger(__name__)
 
+KNOWN_EVENTS_FILE = "data/known_events.json"
 
 def load_known_events():
     try:
