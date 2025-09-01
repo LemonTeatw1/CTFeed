@@ -2,15 +2,66 @@
 
 set -e
 
-echo "==================================="
-echo "    CTFeed Environment Setup"
-echo "==================================="
+# Color definitions
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+NC='\033[0m' # No Color
+
+echo -e "${CYAN}===================================${NC}"
+echo -e "${WHITE}    CTFeed Environment Setup${NC}"
+echo -e "${CYAN}===================================${NC}"
 echo ""
 
+# Function to check required tools
+check_tools() {
+    echo -e "${BLUE}Checking required tools...${NC}"
+    
+    if command -v docker > /dev/null 2>&1; then
+        echo -e "${GREEN}✓ Docker is installed: ${WHITE}$(docker --version)${NC}"
+    else
+        echo -e "${RED}✗ Docker is not installed${NC}"
+    fi
+    
+    if command -v docker-compose > /dev/null 2>&1; then
+        echo -e "${GREEN}✓ Docker Compose is available: ${WHITE}$(docker-compose --version)${NC}"
+    else
+        echo -e "${RED}✗ Docker Compose is not installed${NC}"
+    fi
+    echo ""
+}
+
+# Run system checks
+check_tools
+
 if [ -f ".env" ]; then
-    echo ".env already exists! Nothing to do."
-    echo "If you want to run again please rm the .env file"
-    exit 0
+    echo -e "${YELLOW}.env already exists! Nothing to do.${NC}"
+    echo -e "${BLUE}If you want to run again please rm the .env file${NC}"
+    echo ""
+    
+    while true; do
+        echo -e -n "${YELLOW}Would you like to run the bot now? (y/n): ${NC}"
+        read choice
+        echo ""
+        case $choice in
+            [Yy]* ) 
+                clear
+                ./run.sh
+                exit 0
+                ;;
+            [Nn]* ) 
+                echo -e "${BLUE}Exiting setup.${NC}"
+                exit 0
+                ;;
+            * )
+                echo -e "${RED}Invalid choice. Please enter y or n.${NC}"
+                ;;
+        esac
+    done
 fi
 
 if [ ! -f ".env.example" ]; then
@@ -99,8 +150,34 @@ CTFTIME_API_BASE_URL=https://ctftime.org/api/v1
 KNOWN_EVENTS_FILE=data/known_events.json
 EOF
 
-echo "Are ready to go .env file is created. Please run the bot with python like this:"
+echo -e "${GREEN}✓ Configuration complete! .env file created successfully.${NC}"
 echo ""
-echo "python ctfeed.py"
-echo "or"
-echo "python3 ctfeed.py"
+echo -e "${WHITE}Setup is now complete!${NC}"
+echo ""
+echo -e "${YELLOW}To run your CTFeed bot, use the run script:${NC}"
+echo -e "${CYAN}   ./run.sh${NC}"
+echo ""
+
+while true; do
+    echo -e -n "${YELLOW}Would you like to run the bot now? (y/n): ${NC}"
+    read choice
+    echo ""
+    case $choice in
+        [Yy]* ) 
+            ./run.sh
+            exit 0
+            ;;
+        [Nn]* ) 
+            echo -e "${BLUE}Setup complete! You can run the bot later with:${NC}"
+            echo -e "${CYAN}   ./run.sh${NC}"
+            echo ""
+            echo -e "${YELLOW}Or run manually with:${NC}"
+            echo -e "${BLUE}   uv run python ctfeed.py${NC}"
+            echo -e "${BLUE}   sudo docker-compose up -d --build${NC}"
+            exit 0
+            ;;
+        * ) 
+            echo -e "${RED}Invalid choice. Please enter y or n.${NC}"
+            ;;
+    esac
+done
