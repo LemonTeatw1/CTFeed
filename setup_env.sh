@@ -32,11 +32,24 @@ check_tools() {
     else
         echo -e "${RED}✗ Docker Compose is not installed${NC}"
     fi
+}
+
+check_data_directory() {
+    if [ ! -w "data" ]; then
+        echo -e "${YELLOW}✗ Data directory is not writable, creating...${NC}"
+        mkdir -p data
+    fi
+    if [ ! -f "data/known_events.json" ]; then
+        echo -e "${YELLOW}✗ known_events.json not found, creating...${NC}"
+        echo "[]" > data/known_events.json
+    fi
+    echo -e "${GREEN}✓ Data directory is writable and ${WHITE}data/known_events.json${NC} ${GREEN}is created${NC}"
     echo ""
 }
 
 # Run system checks
 check_tools
+check_data_directory
 
 if [ -f ".env" ]; then
     echo -e "${YELLOW}.env already exists! Nothing to do.${NC}"
