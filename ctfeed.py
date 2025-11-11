@@ -108,7 +108,7 @@ def main():
 
 @bot.slash_command(name = "create_ctf_channel", description = "Create a CTF channel in the CTF category")
 async def create_CTF_channel(ctx, channel_name:str):
-    category_name = "Imcoming/Running CTF"
+    category_name = "Incoming/Running CTF"
     guild = ctx.guild
     category = discord.utils.get(ctx.guild.categories, name=category_name)
 
